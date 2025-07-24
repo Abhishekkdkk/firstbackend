@@ -30,23 +30,29 @@ const userSchema = new mongoose.Schema({
     },
     avatar: {
         type: String,
+        required : true,
     }
     
     
 },{timestamps: true});
-userSchema.pre('save', function(next) {
-    if (!this.isModified('password')) {
-       return next();
+userSchema.pre('save', async function(next) {
+    if (this.isNew || this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 10);
     }
-    this.password = bcrypt.hash(this.password, 10);
+    if (this.isNew || this.isModified('refreshToken')) {
+    this.refreshToken = await this.generateRefreshToken();
+    }
     next();
 });
 
 userSchema.methods.isPasswordCorrect = async function(password) {
     return await bcrypt.compare(password, this.password);//RETURNS TRUE OR FALSE
 }
-userSchema.methods.generateAccessToken = function() {
-    return jwt.sign({ _id: this._id }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRY });
+userSchema.methods.generateAccessToken = async function() {
+    return await jwt.sign({ _id: this._id }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRY });
+}
+userSchema.methods.generateRefreshToken = async function() {
+    return await jwt.sign({ _id: this._id }, process.env.REFRESH_TOKEN_SECRET);
 }
 const User = mongoose.model("User", userSchema);
 export default User;
