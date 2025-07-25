@@ -1,3 +1,0 @@
-let loginuser = (req, res) => {
-    
-}

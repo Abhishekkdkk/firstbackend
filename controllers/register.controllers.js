@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import connectDB from "../src/db/index.js";
 import User from '../src/models/user.model.js';
+import cloudinary from "./cloudinary.controllers.js";
 import path from 'path';
 import {promises as fs} from 'fs'
 connectDB();
@@ -20,14 +21,19 @@ let registeruser = async (req, res) => {
 
     if(!req.file) return res.status(401).send('Avatar must be sent');
 
-        let filename = `${Date.now()}-${req.file.originalname}`;
-        let filepath = path.join(process.cwd(), 'uploads/useravatar', filename);
+        let filepath = path.join(process.cwd(), 'uploads/useravatar', req.file.originalname);
         //   process.cwd() = __dirname for es6
 
         await fs.writeFile(filepath, req.file.buffer);
-        
+        const result = await cloudinary.uploader.upload(filepath);
+        let imgurl = result.secure_url;
+
+        fs.unlink(filepath, err => {
+            if(err) console.log('Error deleting the file : ', err);
+        })
+
         let user = await User.create({
-            username, email, password, avatar : filepath
+            username, email, password, avatar : imgurl
         });
         res.send(user);
     }
